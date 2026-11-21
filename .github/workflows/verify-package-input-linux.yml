@@ -36,9 +36,9 @@ jobs:
         enable-cache: false
     - name: Set up foreign architecture emulation
       uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
-    - name: Install locked test group
+    - name: Install upstream test group
       working-directory: candidate
-      run: uv sync --locked --no-dev --group test
+      run: uv sync --no-dev --group test
     - name: Run doctests
       working-directory: candidate
       run: uv run --no-sync pytest cibuildwheel --junitxml=doctests.xml
