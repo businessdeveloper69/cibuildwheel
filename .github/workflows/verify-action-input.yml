@@ -1,0 +1,150 @@
+name: Verify package input on real MarkupSafe wheels
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  wheels:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - os: windows-latest
+          ident: cp313-win_amd64
+        - os: macos-15
+          ident: cp313-macosx_arm64
+        - os: ubuntu-24.04
+          ident: cp313-manylinux_x86_64
+    env:
+      TREE: cee46918c995cfe3b143313200cfb435ede088b2
+      CIBW_TEST_COMMAND: python -c "import markupsafe; from markupsafe import _speedups; assert str(markupsafe.escape(chr(38))) == chr(38) + 'amp;'; print(_speedups.__file__)"
+    steps:
+    - name: Use identical checkout settings across runner operating systems
+      shell: bash
+      run: git config --global core.autocrlf false
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        repository: pypa/cibuildwheel
+        ref: 92df0b4d63600b933002d1697a4dda4fc3afd723
+        path: baseline
+        persist-credentials: false
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        repository: pypa/cibuildwheel
+        ref: 92df0b4d63600b933002d1697a4dda4fc3afd723
+        path: candidate
+        persist-credentials: false
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: '3.13'
+    - name: Verify proposed tree and prepare two real source distributions
+      shell: python
+      env:
+        PATCH: ZGlmZiAtLWdpdCBhLy5naXRodWIvd29ya2Zsb3dzL3Rlc3QueW1sIGIvLmdpdGh1Yi93b3JrZmxvd3MvdGVzdC55bWwKaW5kZXggMjdjMWUxZi4uZTcxZTJiZiAxMDA2NDQKLS0tIGEvLmdpdGh1Yi93b3JrZmxvd3MvdGVzdC55bWwKKysrIGIvLmdpdGh1Yi93b3JrZmxvd3MvdGVzdC55bWwKQEAgLTE5NSwxMSArMTk1LDE3IEBAIGpvYnM6CiAgICAgICAgIENJQldfUExBVEZPUk06ICR7eyBtYXRyaXgudGVzdF9zZWxlY3QgfX0KICAgICAgICAgQ0lCV19URVNUX1JVTlRJTUU6ICR7eyBtYXRyaXgudGVzdF9ydW50aW1lIH19CiAKKyAgICAtIG5hbWU6IEJ1aWxkIHRoZSBzYW1wbGUgc291cmNlIGRpc3RyaWJ1dGlvbgorICAgICAgaWY6IG1hdHJpeC50ZXN0X3NlbGVjdCA9PSAnJworICAgICAgcnVuOiB1diBidWlsZCAtLXNkaXN0IHNhbXBsZV9wcm9qIC0tb3V0LWRpciBzYW1wbGVfZGlzdAorICAgICAgZW52OgorICAgICAgICBDSUJVSUxEV0hFRUw6ICcxJyAjIFJlcXVpcmVkIGJ5IHRoZSBzYW1wbGUgcHJvamVjdAorCiAgICAgLSBuYW1lOiBSdW4gYSBzYW1wbGUgYnVpbGQgKEdpdEh1YiBBY3Rpb24sIG9ubHkpCiAgICAgICB1c2VzOiAkLwogICAgICAgaWY6IG1hdHJpeC50ZXN0X3NlbGVjdCA9PSAnJwogICAgICAgd2l0aDoKLSAgICAgICAgcGFja2FnZS1kaXI6IHNhbXBsZV9wcm9qCisgICAgICAgIHBhY2thZ2U6IHNhbXBsZV9kaXN0L3NwYW0tMC4xLjAudGFyLmd6CiAgICAgICAgIG91dHB1dC1kaXI6IHdoZWVsaG91c2Vfb25seQogICAgICAgICBvbmx5OiBjcDMxMy0ke3sgcnVubmVyLm9zID09ICdMaW51eCcgJiYgKHJ1bm5lci5hcmNoID09ICdBUk02NCcgJiYgJ21hbnlsaW51eF9hYXJjaDY0JyB8fCAnbWFueWxpbnV4X3g4Nl82NCcpIHx8IChydW5uZXIub3MgPT0gJ1dpbmRvd3MnICYmICd3aW5fYW1kNjQnIHx8ICdtYWNvc3hfeDg2XzY0JykgfX0KIApkaWZmIC0tZ2l0IGEvYWN0aW9uLnltbCBiL2FjdGlvbi55bWwKaW5kZXggYTg2Njc5OC4uMmU5ZmY4NyAxMDA2NDQKLS0tIGEvYWN0aW9uLnltbAorKysgYi9hY3Rpb24ueW1sCkBAIC0xLDggKzEsMTEgQEAKIG5hbWU6IGNpYnVpbGR3aGVlbAogZGVzY3JpcHRpb246ICdJbnN0YWxscyBhbmQgcnVucyBjaWJ1aWxkd2hlZWwgb24gdGhlIGN1cnJlbnQgcnVubmVyJwogaW5wdXRzOgorICBwYWNrYWdlOgorICAgIGRlc2NyaXB0aW9uOiAnUHJvamVjdCBkaXJlY3Rvcnkgb3Igc291cmNlIGRpc3RyaWJ1dGlvbiB0byBidWlsZCwgZGVmYXVsdHMgdG8gIi4iJworICAgIHJlcXVpcmVkOiBmYWxzZQogICBwYWNrYWdlLWRpcjoKLSAgICBkZXNjcmlwdGlvbjogJ0lucHV0IGRpcmVjdG9yeSwgZGVmYXVsdHMgdG8gIi4iJworICAgIGRlc2NyaXB0aW9uOiAnQWxpYXMgZm9yIHBhY2thZ2UsIHVzZWQgd2hlbiBwYWNrYWdlIGlzIHVuc2V0JwogICAgIHJlcXVpcmVkOiBmYWxzZQogICAgIGRlZmF1bHQ6IC4KICAgb3V0cHV0LWRpcjoKQEAgLTk5LDcgKzEwMiw3IEBAIHJ1bnM6CiAgICAgICAgIGNpYndfYmluID0gW3AgZm9yIHAgaW4gYnVpbGRlci5iaW5fcGF0aC5nbG9iKCJjaWJ1aWxkd2hlZWwqIikgaWYgcC5zdGVtID09ICJjaWJ1aWxkd2hlZWwiXVswXQogCiAgICAgICAgICMgQnVpbGQgdGhlIGNvbW1hbmQgbGluZQotICAgICAgICBjbWRfYXJncyA9IFtzdHIoY2lid19iaW4pLCBvcy5lbnZpcm9uWyJJTlBVVF9QQUNLQUdFX0RJUiJdXQorICAgICAgICBjbWRfYXJncyA9IFtzdHIoY2lid19iaW4pLCBvcy5lbnZpcm9uWyJJTlBVVF9QQUNLQUdFIl1dCiAKICAgICAgICAgaWYgb3V0cHV0X2RpciA6PSBvcy5lbnZpcm9uLmdldCgiSU5QVVRfT1VUUFVUX0RJUiIpOgogICAgICAgICAgICAgY21kX2FyZ3MgKz0gWyItLW91dHB1dC1kaXIiLCBvdXRwdXRfZGlyXQpAQCAtMTI5LDcgKzEzMiw3IEBAIHJ1bnM6CiAgICAgICBzaGVsbDogYmFzaAogICAgICAgZW52OgogICAgICAgICBQWVRIT046ICR7eyBpbnB1dHMucHl0aG9uLXBhdGggfHwgc3RlcHMucHl0aG9uLm91dHB1dHMucHl0aG9uLXBhdGggfHwgJ3B5dGhvbjMnIH19Ci0gICAgICAgIElOUFVUX1BBQ0tBR0VfRElSOiAke3sgaW5wdXRzLnBhY2thZ2UtZGlyIH19CisgICAgICAgIElOUFVUX1BBQ0tBR0U6ICR7eyBpbnB1dHMucGFja2FnZSB8fCBpbnB1dHMucGFja2FnZS1kaXIgfX0KICAgICAgICAgSU5QVVRfT1VUUFVUX0RJUjogJHt7IGlucHV0cy5vdXRwdXQtZGlyIH19CiAgICAgICAgIElOUFVUX0NPTkZJR19GSUxFOiAke3sgaW5wdXRzLmNvbmZpZy1maWxlIH19CiAgICAgICAgIElOUFVUX09OTFk6ICR7eyBpbnB1dHMub25seSB9fQpkaWZmIC0tZ2l0IGEvZG9jcy9jaS1zZXJ2aWNlcy5tZCBiL2RvY3MvY2ktc2VydmljZXMubWQKaW5kZXggNjM4MWYxNy4uM2ZmMGY0NiAxMDA2NDQKLS0tIGEvZG9jcy9jaS1zZXJ2aWNlcy5tZAorKysgYi9kb2NzL2NpLXNlcnZpY2VzLm1kCkBAIC0yMiw5ICsyMiwxMiBAQCAjIyMgR2l0SHViIEFjdGlvbnMgW2xpbnV4L21hYy93aW5kb3dzXSB7OiAjZ2l0aHViLWFjdGlvbnN9CiAgICAgeyUgaW5jbHVkZSAiLi4vZXhhbXBsZXMvZ2l0aHViLW1pbmltYWwueW1sIiAlfQogICAgIGBgYAogCi0gICAgVXNlIGBlbnY6YCB0byBwYXNzIFtidWlsZCBvcHRpb25zXShvcHRpb25zLm1kKSBhbmQgYHdpdGg6YCB0byBzZXQKLSAgICBgcGFja2FnZS1kaXI6IC5gLCBgb3V0cHV0LWRpcjogd2hlZWxob3VzZWAgYW5kIGBjb25maWctZmlsZTogJydgCi0gICAgbG9jYXRpb25zICh0aG9zZSB2YWx1ZXMgYXJlIHRoZSBkZWZhdWx0cykuIFlvdSBjYW4gYWxzbyBwYXNzIGEKKyAgICBVc2UgYGVudjpgIHRvIHBhc3MgW2J1aWxkIG9wdGlvbnNdKG9wdGlvbnMubWQpLiBVbmRlciBgd2l0aDpgLCB1c2UKKyAgICBgcGFja2FnZWAgZm9yIHRoZSBwcm9qZWN0IGRpcmVjdG9yeSAoZGVmYXVsdCBgLmApIG9yIGEgc291cmNlIGRpc3RyaWJ1dGlvbgorICAgIHN1Y2ggYXMgYGRpc3QvZXhhbXBsZS0xLjAudGFyLmd6YC4gVGhlIGFjdGlvbiBhbHNvIGFjY2VwdHMgYHBhY2thZ2UtZGlyYAorICAgIGFzIGFuIGFsaWFzLiBJZiBib3RoIGlucHV0cyBhcmUgc2V0LCBgcGFja2FnZWAgdGFrZXMgcHJlY2VkZW5jZS4KKyAgICBUaGUgYG91dHB1dC1kaXJgIGFuZCBgY29uZmlnLWZpbGVgIGlucHV0cyBkZWZhdWx0IHRvIGB3aGVlbGhvdXNlYCBhbmQKKyAgICB0aGUgZW1wdHkgc3RyaW5nLCByZXNwZWN0aXZlbHkuIFlvdSBjYW4gYWxzbyBwYXNzIGEKICAgICBjb21tYS1zZXBhcmF0ZWQgbGlzdCBvZiBleHRyYXMgdG8gaW5zdGFsbCBhZGRpdGlvbmFsIHBhY2thZ2VzLgogICAgIEZvciBleGFtcGxlLCBgZXh0cmFzOiAidXYiYCB0byBpbnN0YWxsIFVWIGludG8gdGhlIHZpcnR1YWwgZW52aXJvbm1lbnQuCiAgICAgT24gc2VsZi1ob3N0ZWQgcnVubmVycyB3aXRoIGFuIGFyY2hpdGVjdHVyZSBub3Qgc3VwcG9ydGVkIGJ5Cg==
+        PATCH_HASH: abf62d5436296ee2dbe00eb403b8f632206613d449ef0bc112b4974c2ce6e294
+      run: |-
+        import base64, hashlib, os, shutil, subprocess, tarfile, urllib.request
+        from pathlib import Path
+        root = Path.cwd()
+        patch = base64.b64decode(os.environ["PATCH"], validate=True)
+        assert hashlib.sha256(patch).hexdigest() == os.environ["PATCH_HASH"]
+        def git(*args, **kw):
+            return subprocess.check_output(["git","-C","candidate",*args], **kw)
+        git("apply","--cached","-",input=patch)
+        assert git("write-tree").decode().strip() == os.environ["TREE"]
+        git("checkout-index","-a","-f")
+        assert git("diff","--exit-code") == b""
+        srcdir = root / "input files"
+        srcdir.mkdir()
+        for v, path, digest in [
+            ("3.0.2","b2/97/5d42485e71dfc078108a86d6de8fa46db44a1a9295e89c5d6d4a06e23a62","ee55d3edf80167e48ea11a923c7386f4669df67d7994554387f84e7d8b0a2bf0"),
+            ("3.0.3","7e/99/7690b6d4034fffd95959cbe0c02de8deb3098cc577c67bb6a24fe5d7caa7","722695808f4b6457b320fdc131280796bdceb04ab50fe1795cd540799ebe1698"),
+        ]:
+            filename = f"markupsafe-{v}.tar.gz"
+            data = urllib.request.urlopen("https://files.pythonhosted.org/packages/"+path+"/"+filename).read()
+            assert hashlib.sha256(data).hexdigest() == digest
+            local = srcdir / filename
+            local.write_bytes(data)
+            with tarfile.open(local) as arc:
+                arc.extractall(srcdir,filter="data")
+            if v=="3.0.2":
+                shutil.copytree(srcdir/f"markupsafe-{v}",root,dirs_exist_ok=True)
+        (root/"verification.toml").write_text('[tool.cibuildwheel]\nbuild-frontend = "pip"\n')
+    - name: upstream-fallback
+      uses: ./baseline
+      with:
+        package: input files/markupsafe-3.0.3.tar.gz
+        only: ${{ matrix.ident }}
+        config-file: verification.toml
+        output-dir: built/upstream-fallback
+    - name: new-archive
+      uses: ./candidate
+      with:
+        package: input files/markupsafe-3.0.3.tar.gz
+        only: ${{ matrix.ident }}
+        config-file: verification.toml
+        output-dir: built/new-archive
+    - name: new-directory
+      uses: ./candidate
+      with:
+        package: input files/markupsafe-3.0.3
+        only: ${{ matrix.ident }}
+        config-file: verification.toml
+        output-dir: built/new-directory
+    - name: legacy-archive
+      uses: ./candidate
+      with:
+        package-dir: input files/markupsafe-3.0.3.tar.gz
+        only: ${{ matrix.ident }}
+        config-file: verification.toml
+        output-dir: built/legacy-archive
+    - name: legacy-directory
+      uses: ./candidate
+      with:
+        package-dir: input files/markupsafe-3.0.3
+        only: ${{ matrix.ident }}
+        config-file: verification.toml
+        output-dir: built/legacy-directory
+    - name: no-input
+      uses: ./candidate
+      with:
+        only: ${{ matrix.ident }}
+        config-file: verification.toml
+        output-dir: built/no-input
+    - name: precedence
+      uses: ./candidate
+      with:
+        package: input files/markupsafe-3.0.3.tar.gz
+        package-dir: missing directory
+        only: ${{ matrix.ident }}
+        config-file: verification.toml
+        output-dir: built/precedence
+    - name: Verify selected versions and native extensions in every wheel
+      shell: python
+      env:
+        EXPECTED: '{"upstream-fallback": "3.0.2", "new-archive": "3.0.3", "new-directory": "3.0.3", "legacy-archive": "3.0.3", "legacy-directory": "3.0.3",
+          "no-input": "3.0.2", "precedence": "3.0.3"}'
+      run: |-
+        import email, hashlib, json, os, zipfile
+        from pathlib import Path
+        rows = []
+        for case, expected in json.loads(os.environ["EXPECTED"]).items():
+            wheel, = Path("built",case).glob("*.whl")
+            with zipfile.ZipFile(wheel) as z:
+                names = z.namelist()
+                metadata, = [name for name in names if name.endswith(".dist-info/METADATA")]
+                version = email.message_from_bytes(z.read(metadata))["Version"]
+                ext, = [name for name in names if "_speedups" in name and name.endswith((".pyd",".so"))]
+                assert version == expected, (case, version, expected)
+                assert wheel.name.startswith("markupsafe-"+version+"-cp313-"), wheel.name
+            rows.append({"case":case, "version":version, "wheel":wheel.name,"extension":ext,"sha256":hashlib.sha256(wheel.read_bytes()).hexdigest()})
+        out={"runner":os.environ["RUNNER_OS"],"expected_tree":os.environ["TREE"],"wheels":rows}
+        Path("native-results.json").write_text(json.dumps(out,indent=2))
+        print(json.dumps(out, indent=2))
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: native-${{ runner.os }}
+        path: native-results.json
+        if-no-files-found: error
