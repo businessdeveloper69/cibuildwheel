@@ -77,41 +77,41 @@ jobs:
       with:
         package: input files/markupsafe-3.0.3.tar.gz
         only: ${{ matrix.ident }}
-        config-file: verification.toml
+        config-file: ${{ github.workspace }}/verification.toml
         output-dir: built/upstream-fallback
     - name: new-archive
       uses: ./candidate
       with:
         package: input files/markupsafe-3.0.3.tar.gz
         only: ${{ matrix.ident }}
-        config-file: verification.toml
+        config-file: ${{ github.workspace }}/verification.toml
         output-dir: built/new-archive
     - name: new-directory
       uses: ./candidate
       with:
         package: input files/markupsafe-3.0.3
         only: ${{ matrix.ident }}
-        config-file: verification.toml
+        config-file: ${{ github.workspace }}/verification.toml
         output-dir: built/new-directory
     - name: legacy-archive
       uses: ./candidate
       with:
         package-dir: input files/markupsafe-3.0.3.tar.gz
         only: ${{ matrix.ident }}
-        config-file: verification.toml
+        config-file: ${{ github.workspace }}/verification.toml
         output-dir: built/legacy-archive
     - name: legacy-directory
       uses: ./candidate
       with:
         package-dir: input files/markupsafe-3.0.3
         only: ${{ matrix.ident }}
-        config-file: verification.toml
+        config-file: ${{ github.workspace }}/verification.toml
         output-dir: built/legacy-directory
     - name: no-input
       uses: ./candidate
       with:
         only: ${{ matrix.ident }}
-        config-file: verification.toml
+        config-file: ${{ github.workspace }}/verification.toml
         output-dir: built/no-input
     - name: precedence
       uses: ./candidate
@@ -119,7 +119,7 @@ jobs:
         package: input files/markupsafe-3.0.3.tar.gz
         package-dir: missing directory
         only: ${{ matrix.ident }}
-        config-file: verification.toml
+        config-file: ${{ github.workspace }}/verification.toml
         output-dir: built/precedence
     - name: Verify selected versions and native extensions in every wheel
       shell: python
